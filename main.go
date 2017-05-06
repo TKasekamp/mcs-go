@@ -70,18 +70,20 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	// Register our new client
 	clients[ws] = true
 
-	//for {
-	//	var command Command
-	//	// Read in a new message as JSON and map it to a Message object
-	//	err := ws.ReadJSON(&command)
-	//	if err != nil {
-	//		log.Printf("error: %v", err)
-	//		delete(clients, ws)
-	//		break
-	//	}
-	//	// Send the newly received message to the broadcast channel
-	//	broadcast <- command
-	//}
+	for {
+		// I guess this has to be here???
+		// There is actually no command sent here
+		var command Command
+		// Read in a new message as JSON and map it to a Message object
+		err := ws.ReadJSON(&command)
+		if err != nil {
+			log.Printf("error: %v", err)
+			delete(clients, ws)
+			break
+		}
+		//// Send the newly received message to the broadcast channel
+		//broadcast <- command
+	}
 }
 
 func handleMessages() {
@@ -89,9 +91,9 @@ func handleMessages() {
 		// Grab the next message from the broadcast channel
 		msg := <-broadcast
 
-		fmt.Print("Sending message to client")
 		// Send it out to every client that is currently connected
 		for client := range clients {
+			fmt.Println("Sending message to client")
 			err := client.WriteJSON(msg)
 			if err != nil {
 				log.Printf("error: %v", err)
@@ -116,7 +118,7 @@ func handleWork() {
 	}
 }
 func simulateWork(msg *Command) {
-	fmt.Print("Doing some work")
+	fmt.Println("Doing some work")
 	//Simulate work
 	time.Sleep(time.Second * 3)
 	msg.Status = statuses[random(0, len(statuses))]
