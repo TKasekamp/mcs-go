@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"github.com/gorilla/websocket"
+	"time"
 )
 
 var commands []Command
@@ -25,8 +26,8 @@ type Command struct {
 	Id      string `json:"id"`
 	Command string `json:"command"`
 	UserId  string `json:"userId"`
-	Status  string `json:status`
-	Result  string `json:result`
+	Status  string `json:"status"`
+	Result  string `json:"result"`
 }
 
 func makeDB() []Command {
@@ -48,6 +49,8 @@ func posting(c *gin.Context) {
 		//fmt.Print(uuid.NewV4())
 		//json.Id = fmt.Sprintf("%s", uuid.NewV4())
 		commands = append(commands, json)
+		// Putting the command in some queue
+		time.Sleep(time.Millisecond * 500)
 		broadcast <- json
 		c.JSON(http.StatusOK, gin.H{"status": json.Status, "id": json.Id})
 	}
