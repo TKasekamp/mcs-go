@@ -87,6 +87,21 @@ func handleMessages() {
 	}
 }
 
+func Cors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "DELETE,POST, PUT")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		c.Next()
+	}
+}
+
+func OptionsUser(c *gin.Context) {
+	c.Writer.Header().Set("Access-Control-Allow-Methods", "DELETE,POST, PUT")
+	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	c.Next()
+}
+
 func main() {
 	port := os.Getenv("PORT")
 
@@ -101,7 +116,8 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Logger())
-
+	router.Use(Cors())
+	router.OPTIONS("/commands", OptionsUser) // POST
 	router.GET("/commands", func(c *gin.Context) {
 		c.JSON(http.StatusOK, commands)
 	})
