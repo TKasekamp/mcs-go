@@ -1,14 +1,12 @@
 {
-  "name": "Start on Heroku: Go",
-  "description": "Go Getting Started Example App",
+  "name": "MCS-GO",
+  "description": "Estcube-2 MCS server with GO",
   "keywords": [
     "getting-started",
-    "go",
-    "sample",
-    "example"
+    "go"
   ],
   "image": "heroku/go:1.6",
-  "mount_dir": "src/github.com/heroku/go-getting-started",
-  "website": "http://github.com/heroku/go-getting-started",
-  "repository": "http://github.com/heroku/go-getting-started"
+  "mount_dir": "src/github.com/TKasekamp/mcs-go",
+  "website": "http://github.com/TKasekamp/mcs-go",
+  "repository": "http://github.com/TKasekamp/mcs-go"
 }
