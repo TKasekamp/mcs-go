@@ -9,12 +9,14 @@ import (
 	"github.com/satori/go.uuid"
 	"github.com/gorilla/websocket"
 	"time"
+	"math/rand"
 )
 
 var commands []Command
-
+var statuses = []string{"Completed", "Failed"}
 //https://scotch.io/bar-talk/build-a-realtime-chat-server-with-go-and-websockets
 var clients = make(map[*websocket.Conn]bool) // connected clients
+var workChannel = make(chan Command)         // First channel
 var broadcast = make(chan Command)           // broadcast channel
 // CheckOrigin needed because CORS or something
 var upgrader = websocket.Upgrader{
@@ -51,7 +53,7 @@ func posting(c *gin.Context) {
 		commands = append(commands, json)
 		// Putting the command in some queue
 		time.Sleep(time.Millisecond * 500)
-		broadcast <- json
+		workChannel <- json
 		c.JSON(http.StatusOK, gin.H{"status": json.Status, "id": json.Id})
 	}
 }
@@ -68,24 +70,26 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	// Register our new client
 	clients[ws] = true
 
-	for {
-		var command Command
-		// Read in a new message as JSON and map it to a Message object
-		err := ws.ReadJSON(&command)
-		if err != nil {
-			log.Printf("error: %v", err)
-			delete(clients, ws)
-			break
-		}
-		// Send the newly received message to the broadcast channel
-		broadcast <- command
-	}
+	//for {
+	//	var command Command
+	//	// Read in a new message as JSON and map it to a Message object
+	//	err := ws.ReadJSON(&command)
+	//	if err != nil {
+	//		log.Printf("error: %v", err)
+	//		delete(clients, ws)
+	//		break
+	//	}
+	//	// Send the newly received message to the broadcast channel
+	//	broadcast <- command
+	//}
 }
 
 func handleMessages() {
 	for {
 		// Grab the next message from the broadcast channel
 		msg := <-broadcast
+
+		fmt.Print("Sending message to client")
 		// Send it out to every client that is currently connected
 		for client := range clients {
 			err := client.WriteJSON(msg)
@@ -96,6 +100,37 @@ func handleMessages() {
 			}
 		}
 	}
+}
+
+func handleWork() {
+	for {
+		msg := <-workChannel
+		simulateWork(&msg)
+		for i := range commands {
+			if commands[i].Id == msg.Id {
+				commands[i] = msg
+				break
+			}
+		}
+		broadcast <- msg
+	}
+}
+func simulateWork(msg *Command) {
+	fmt.Print("Doing some work")
+	//Simulate work
+	time.Sleep(time.Second * 3)
+	msg.Status = statuses[random(0, len(statuses))]
+	if msg.Status == "Failed" {
+		msg.Result = "Something went very wrong"
+	} else {
+		msg.Result = "Command queued up for next pass"
+	}
+
+}
+
+func random(min, max int) int {
+	rand.Seed(time.Now().Unix())
+	return rand.Intn(max-min) + min
 }
 
 func Cors() gin.HandlerFunc {
@@ -139,6 +174,9 @@ func main() {
 	router.GET("/ws", func(c *gin.Context) {
 		handleConnections(c.Writer, c.Request)
 	})
+
+	// Thread for working
+	go handleWork()
 
 	// Start listening for incoming chat messages
 	go handleMessages()
