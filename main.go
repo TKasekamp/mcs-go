@@ -25,23 +25,31 @@ type Command struct {
 	Id      string `json:"id"`
 	Command string `json:"command"`
 	UserId  string `json:"userId"`
+	Status  string `json:status`
+	Result  string `json:result`
 }
 
 func makeDB() []Command {
-	var c1 = Command{"rand-id-0", "print this", "random-user-id-0"}
+	//var c1 = Command{"rand-id-0", "print this", "random-user-id-0"}
 	var commands []Command
-	commands = append(commands, c1)
+	//commands = append(commands, c1)
 	return commands
+}
+
+func processCommand(c *Command) {
+	c.Id = fmt.Sprintf("%s", uuid.NewV4())
+	c.Status = "Accepted"
 }
 
 func posting(c *gin.Context) {
 	var json Command
 	if c.BindJSON(&json) == nil {
-		fmt.Print(uuid.NewV4())
-		json.Id = fmt.Sprintf("%s", uuid.NewV4())
+		processCommand(&json)
+		//fmt.Print(uuid.NewV4())
+		//json.Id = fmt.Sprintf("%s", uuid.NewV4())
 		commands = append(commands, json)
 		broadcast <- json
-		c.JSON(http.StatusOK, gin.H{"status": "command submitted"})
+		c.JSON(http.StatusOK, gin.H{"status": json.Status, "id": json.Id})
 	}
 }
 
