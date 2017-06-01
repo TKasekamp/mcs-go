@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"github.com/gorilla/websocket"
-	"time"
 	"math/rand"
+	"time"
 )
 
 var commands []Command
-var statuses = []string{"Completed", "Failed"}
+var statuses = []string{"RESPONSE_RECEIVED", "FAILED"}
 //https://scotch.io/bar-talk/build-a-realtime-chat-server-with-go-and-websockets
 var clients = make(map[*websocket.Conn]bool) // connected clients
 var workChannel = make(chan Command)         // First channel
@@ -33,6 +33,8 @@ type Command struct {
 	UserId         string `json:"userId"`
 	Status         string `json:"status"`
 	ResponseString string `json:"responseString"`
+	SubmitTime     time.Time `json:"submitTime"`
+	ResponseTime   time.Time `json:"responseTime"`
 }
 
 func makeDB() []Command {
@@ -44,7 +46,8 @@ func makeDB() []Command {
 
 func processCommand(c *Command) {
 	c.Id = fmt.Sprintf("%s", uuid.NewV4())
-	c.Status = "Accepted"
+	c.Status = "ACCEPTED"
+	c.SubmitTime = time.Now().UTC()
 }
 
 func posting(c *gin.Context) {
@@ -126,11 +129,12 @@ func simulateWork(msg *Command) {
 	//Simulate work
 	time.Sleep(time.Second * 3)
 	msg.Status = statuses[random(0, len(statuses))]
-	if msg.Status == "Failed" {
+	if msg.Status == "FAILED" {
 		msg.ResponseString = "Something went very wrong"
 	} else {
 		msg.ResponseString = "Command queued up for next pass"
 	}
+	msg.ResponseTime = time.Now().UTC()
 
 }
 
