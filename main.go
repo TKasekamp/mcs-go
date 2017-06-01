@@ -25,11 +25,14 @@ var upgrader = websocket.Upgrader{
 	}, }
 
 type Command struct {
-	Id      string `json:"id"`
-	Command string `json:"command"`
-	UserId  string `json:"userId"`
-	Status  string `json:"status"`
-	Result  string `json:"result"`
+	Id             string `json:"id"`
+	Command        string `json:"commandString"`
+	ObcsSchedule   string `json:"obcsSchedule"`
+	McsSchedule    string `json:"mcsSchedule"`
+	Priority       string `json:"priority"`
+	UserId         string `json:"userId"`
+	Status         string `json:"status"`
+	ResponseString string `json:"responseString"`
 }
 
 func makeDB() []Command {
@@ -54,7 +57,8 @@ func posting(c *gin.Context) {
 		// Putting the command in some queue
 		time.Sleep(time.Millisecond * 500)
 		workChannel <- json
-		c.JSON(http.StatusOK, gin.H{"status": json.Status, "id": json.Id})
+		//c.JSON(http.StatusOK, gin.H{"status": json.Status, "id": json.Id})
+		c.JSON(http.StatusAccepted, json)
 	}
 }
 
@@ -123,9 +127,9 @@ func simulateWork(msg *Command) {
 	time.Sleep(time.Second * 3)
 	msg.Status = statuses[random(0, len(statuses))]
 	if msg.Status == "Failed" {
-		msg.Result = "Something went very wrong"
+		msg.ResponseString = "Something went very wrong"
 	} else {
-		msg.Result = "Command queued up for next pass"
+		msg.ResponseString = "Command queued up for next pass"
 	}
 
 }
