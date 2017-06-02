@@ -58,10 +58,13 @@ func posting(c *gin.Context) {
 		//json.Id = fmt.Sprintf("%s", uuid.NewV4())
 		commands = append(commands, json)
 		// Putting the command in some queue
-		time.Sleep(time.Millisecond * 500)
+		if json.Command != "a" {
+			time.Sleep(time.Millisecond * 500)
+		}
+		c.JSON(http.StatusAccepted, json)
 		workChannel <- json
 		//c.JSON(http.StatusOK, gin.H{"status": json.Status, "id": json.Id})
-		c.JSON(http.StatusAccepted, json)
+
 	}
 }
 
@@ -127,7 +130,9 @@ func handleWork() {
 func simulateWork(msg *Command) {
 	fmt.Println("Doing some work")
 	//Simulate work
-	time.Sleep(time.Second * 3)
+	if msg.Command != "a" {
+		time.Sleep(time.Second * 3)
+	}
 	msg.Status = statuses[random(0, len(statuses))]
 	if msg.Status == "FAILED" {
 		msg.ResponseString = "Something went very wrong"
