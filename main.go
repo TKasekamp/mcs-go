@@ -66,6 +66,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		var c command.Command
 		// Read in a new message as JSON and map it to a Message object
 		err := ws.ReadJSON(&c)
+
 		if err != nil {
 			log.Printf("error: %v", err)
 			delete(clients, ws)
@@ -84,7 +85,8 @@ func handleMessages() {
 		// Send it out to every client that is currently connected
 		for client := range clients {
 			fmt.Println("Sending message to client")
-			err := client.WriteJSON(msg)
+			err := client.WriteJSON(command.Wrapper{Type:command.CommandUpdate, Object: msg})
+			//var wrap = command.Wrapper{Type:command.CommandUpdate, &msg}
 			if err != nil {
 				log.Printf("error: %v", err)
 				client.Close()
