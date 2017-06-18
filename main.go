@@ -6,19 +6,16 @@ import (
 	"os"
 	"github.com/gin-gonic/gin"
 	"fmt"
-	"github.com/satori/go.uuid"
 	"github.com/gorilla/websocket"
-	"math/rand"
 	"time"
 	"mcs-go/command"
 )
 
 var commands []command.Command
-var statuses = []string{"RESPONSE_RECEIVED", "FAILED"}
 //https://scotch.io/bar-talk/build-a-realtime-chat-server-with-go-and-websockets
 var clients = make(map[*websocket.Conn]bool) // connected clients
-var workChannel = make(chan command.Command)         // First channel
-var broadcast = make(chan command.Command)           // broadcast channel
+var workChannel = make(chan command.Command) // First channel
+var broadcast = make(chan command.Command)   // broadcast channel
 // CheckOrigin needed because CORS or something
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -32,17 +29,10 @@ func makeDB() []command.Command {
 	return commands
 }
 
-func processCommand(c *command.Command) {
-	c.Id = fmt.Sprintf("%s", uuid.NewV4())
-	c.Status = "ACCEPTED"
-	c.UserId = "server-value"
-	c.SubmitTime = time.Now().UTC()
-}
-
 func posting(c *gin.Context) {
 	var json command.Command
 	if c.BindJSON(&json) == nil {
-		processCommand(&json)
+		(&json).ProcessCommand()
 		//fmt.Print(uuid.NewV4())
 		//json.Id = fmt.Sprintf("%s", uuid.NewV4())
 		commands = append(commands, json)
@@ -52,7 +42,6 @@ func posting(c *gin.Context) {
 		}
 		c.JSON(http.StatusAccepted, json)
 		workChannel <- json
-		//c.JSON(http.StatusOK, gin.H{"status": json.Status, "id": json.Id})
 
 	}
 }
@@ -106,7 +95,7 @@ func handleMessages() {
 func handleWork() {
 	for {
 		msg := <-workChannel
-		simulateWork(&msg)
+		(&msg).SimulateWork()
 		for i := range commands {
 			if commands[i].Id == msg.Id {
 				commands[i] = msg
@@ -115,26 +104,6 @@ func handleWork() {
 		}
 		broadcast <- msg
 	}
-}
-func simulateWork(msg *command.Command) {
-	fmt.Println("Doing some work")
-	//Simulate work
-	if msg.Body != "a" {
-		time.Sleep(time.Second * 3)
-	}
-	msg.Status = statuses[random(0, len(statuses))]
-	if msg.Status == "FAILED" {
-		msg.Response.Body = map[string]string{"error": "burning!"}
-	} else {
-		msg.Response.Body = map[string]string{"apple": "5", "lettuce": "7"}
-	}
-	msg.Response.ResponseTime = time.Now().UTC()
-
-}
-
-func random(min, max int) int {
-	rand.Seed(time.Now().Unix())
-	return rand.Intn(max-min) + min
 }
 
 func Cors() gin.HandlerFunc {
