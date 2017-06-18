@@ -10,55 +10,44 @@ import (
 	"github.com/gorilla/websocket"
 	"math/rand"
 	"time"
+	"mcs-go/command"
 )
 
-var commands []Command
+var commands []command.Command
 var statuses = []string{"RESPONSE_RECEIVED", "FAILED"}
 //https://scotch.io/bar-talk/build-a-realtime-chat-server-with-go-and-websockets
 var clients = make(map[*websocket.Conn]bool) // connected clients
-var workChannel = make(chan Command)         // First channel
-var broadcast = make(chan Command)           // broadcast channel
+var workChannel = make(chan command.Command)         // First channel
+var broadcast = make(chan command.Command)           // broadcast channel
 // CheckOrigin needed because CORS or something
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	}, }
 
-type Command struct {
-	Id             string `json:"id"`
-	Command        string `json:"commandString"`
-	ObcsSchedule   string `json:"obcsSchedule"`
-	McsSchedule    string `json:"mcsSchedule"`
-	Priority       string `json:"priority"`
-	UserId         string `json:"userId"`
-	Status         string `json:"status"`
-	ResponseString string `json:"responseString"`
-	SubmitTime     time.Time `json:"submitTime"`
-	ResponseTime   time.Time `json:"responseTime"`
-}
-
-func makeDB() []Command {
+func makeDB() []command.Command {
 	//var c1 = Command{"rand-id-0", "print this", "random-user-id-0"}
-	var commands []Command
+	var commands []command.Command
 	//commands = append(commands, c1)
 	return commands
 }
 
-func processCommand(c *Command) {
+func processCommand(c *command.Command) {
 	c.Id = fmt.Sprintf("%s", uuid.NewV4())
 	c.Status = "ACCEPTED"
+	c.UserId = "server-value"
 	c.SubmitTime = time.Now().UTC()
 }
 
 func posting(c *gin.Context) {
-	var json Command
+	var json command.Command
 	if c.BindJSON(&json) == nil {
 		processCommand(&json)
 		//fmt.Print(uuid.NewV4())
 		//json.Id = fmt.Sprintf("%s", uuid.NewV4())
 		commands = append(commands, json)
 		// Putting the command in some queue
-		if json.Command != "a" {
+		if json.Body != "a" {
 			time.Sleep(time.Millisecond * 500)
 		}
 		c.JSON(http.StatusAccepted, json)
@@ -83,9 +72,9 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	for {
 		// I guess this has to be here???
 		// There is actually no command sent here
-		var command Command
+		var c command.Command
 		// Read in a new message as JSON and map it to a Message object
-		err := ws.ReadJSON(&command)
+		err := ws.ReadJSON(&c)
 		if err != nil {
 			log.Printf("error: %v", err)
 			delete(clients, ws)
@@ -127,19 +116,19 @@ func handleWork() {
 		broadcast <- msg
 	}
 }
-func simulateWork(msg *Command) {
+func simulateWork(msg *command.Command) {
 	fmt.Println("Doing some work")
 	//Simulate work
-	if msg.Command != "a" {
+	if msg.Body != "a" {
 		time.Sleep(time.Second * 3)
 	}
 	msg.Status = statuses[random(0, len(statuses))]
 	if msg.Status == "FAILED" {
-		msg.ResponseString = "Something went very wrong"
+		msg.Response.Body = map[string]string{"error": "burning!"}
 	} else {
-		msg.ResponseString = "Command queued up for next pass"
+		msg.Response.Body = map[string]string{"apple": "5", "lettuce": "7"}
 	}
-	msg.ResponseTime = time.Now().UTC()
+	msg.Response.ResponseTime = time.Now().UTC()
 
 }
 
@@ -178,12 +167,12 @@ func main() {
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(Cors())
-	router.OPTIONS("/commands", OptionsUser) // POST
-	router.GET("/commands", func(c *gin.Context) {
+	router.OPTIONS("/api/commands", OptionsUser) // POST
+	router.GET("/api/commands", func(c *gin.Context) {
 		c.JSON(http.StatusOK, commands)
 	})
 
-	router.POST("/commands", posting)
+	router.POST("/api/commands", posting)
 
 	// Configure websocket route
 	router.GET("/ws", func(c *gin.Context) {
