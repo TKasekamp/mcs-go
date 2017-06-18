@@ -9,6 +9,8 @@ import (
 	"github.com/gorilla/websocket"
 	"time"
 	"mcs-go/command"
+	"io/ioutil"
+	"encoding/json"
 )
 
 var commands []command.Command
@@ -106,6 +108,22 @@ func handleWork() {
 	}
 }
 
+func handleLoadJson(c *gin.Context) {
+	//c.Writer.Header().Set("Content-Type", "application/json")
+	//c.Next()
+
+	//c.File("static/prototypes.json")
+	//http.ServeFile(c.Writer, c.Request, "static/prototypes.json" )
+	//c.Next()
+	b, err := ioutil.ReadFile("static/prototypes.json")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	var protos []command.Prototype
+	json.Unmarshal(b, &protos)
+	c.JSON(http.StatusOK, protos)
+}
+
 func Cors() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
@@ -142,7 +160,7 @@ func main() {
 	})
 
 	router.POST("/api/commands", posting)
-
+	router.GET("/api/prototypes", handleLoadJson)
 	// Configure websocket route
 	router.GET("/ws", func(c *gin.Context) {
 		handleConnections(c.Writer, c.Request)
